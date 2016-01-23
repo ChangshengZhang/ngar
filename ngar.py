@@ -133,7 +133,7 @@ class NGAR():
         #注意，迭代次数的下标是从1开始
         for it in range(1,self.number_of_iteration+1):
             # iteration
-            if it%20==0:
+            if it%50==0:
                 print "start %s th iteration:\n" %it
                 #print self.beta
             if self.check_star ==1:
@@ -151,8 +151,7 @@ class NGAR():
             if it% 500==0:
                 end_time = datetime.datetime.now()
                 print (end_time-start_time).seconds
-
-        self.Plot() 
+        self.Plot()
         print "done."
 
     def KalmanFilter(self,x_list,y_list,psi,sigma_sq,rho_beta):
@@ -257,23 +256,22 @@ class NGAR():
                 if np.random.random() <accept:
                     self.psi[ii][jj] = new_psi
 
-
-    def UpdateKappa(self,it):
+    def UpdateKappa(self, it):
         for ii in xrange(self.T-1):
             for jj in xrange(self.p):
 
-                new_kappa = self.kappa[ii][jj]+(2*np.ceil(2*np.random.random())-3)*np.random.geometric(1.0/(1+np.exp(self.log_kappa_q[ii][jj])))
+                new_kappa = self.kappa[ii][jj]+(2*np.ceil(2*np.random.random())-3)*(np.random.geometric(1.0/(1+np.exp(self.log_kappa_q[ii][jj])))-1)
 
-                if new_kappa <0:
+                if new_kappa < 0:
                     accept = 0
                 else:
                     lam1 = self.lambda_[jj] + 1.0*self.kappa[ii][jj]
                     gam1 = self.lambda_[jj]/self.mu[jj] + self.delta[jj]
                     loglike = lam1*np.log(gam1) - math.lgamma(lam1)+(lam1-1)*np.log(self.psi[ii+1][jj])
-                    pnmean = self.psi[ii][jj]* self.delta[jj]
-                    loglike = loglike + 1.0*self.kappa[ii][jj]*np.log(pnmean)- math.lgamma(1.0*self.kappa[ii][jj]+1)
+                    pnmean = self.psi[ii][jj] * self.delta[jj]
+                    loglike = loglike + 1.0*self.kappa[ii][jj]*np.log(pnmean) - math.lgamma(1.0*self.kappa[ii][jj]+1)
 
-                    lam1 = self.lambda_[jj]+ 1.0*new_kappa
+                    lam1 = self.lambda_[jj] + 1.0*new_kappa
                     gam1 = self.lambda_[jj]/self.mu[jj] + self.delta[jj]
                     new_loglike = lam1*np.log(gam1) - math.lgamma(lam1)+(lam1-1)*np.log(self.psi[ii+1][jj])
                     pnmean = self.psi[ii][jj]*self.delta[jj]
@@ -317,8 +315,8 @@ class NGAR():
             elif log_accept <0:
                 accept = np.exp(log_accept)
 
-            self.sigma_sq1_accept = self.sigma_sq1_accept +accept
-            self.sigma_sq1_count = self.sigma_sq1_count +1
+            self.sigma_sq1_accept[ii] = self.sigma_sq1_accept[ii] +accept
+            self.sigma_sq1_count[ii] = self.sigma_sq1_count[ii] +1
 
             if np.random.random() < accept :
                 self.sigma_sq[ii] = new_sigma_sq
@@ -326,7 +324,7 @@ class NGAR():
 
     def UpdateKappaSigmaSq(self,it):
         for ii in range(self.T-1):
-            new_kappa_sigma_sq = self.kappa_sigma_sq[ii]+(2*np.ceil(2*np.random.random())-3)*np.random.geometric(1.0/(1+np.exp(self.log_kappa_sigma_sqq[ii])))
+            new_kappa_sigma_sq = self.kappa_sigma_sq[ii]+(2*np.ceil(2*np.random.random())-3)*(np.random.geometric(1.0/(1+np.exp(self.log_kappa_sigma_sqq[ii])))-1)
 
             if new_kappa_sigma_sq <0:
                 accept = 0
@@ -410,7 +408,6 @@ class NGAR():
                         new_kappa_sigma_sq[ii-1] = np.random.binomial(self.kappa_sigma_sq[ii-1],1.0*new_mean/old_mean)
                     except:
                         new_kappa_sigma_sq[ii-1] = float('nan')
-                
                 old_lam = 1.0*self.kappa_sigma_sq[ii-1]+ self.lambda_sigma
                 old_gam = 1.0*self.rho_sigma/(1-self.rho_sigma)*self.lambda_sigma/self.mu_sigma+self.lambda_sigma/self.mu_sigma
                 new_lam = 1.0*new_kappa_sigma_sq[ii-1]+new_lambda_sigma
@@ -636,48 +633,49 @@ class NGAR():
             except:
                 print "var kf det",np.linalg.det(self.var_kf[:,:,ii])
                 print self.var_kf[:,:,ii]
-                temp_var_kf = self.var_kf[:,:,ii]
-                inv_var_kf = np.zeros((len(temp_var_kf),len(temp_var_kf)))
-                for rr in range(len(temp_var_kf)):
-                    for uu in range(len(temp_var_kf)):
-                        temp_var_kf[rr][uu] = float('inf')
+                var_len = len(self.var_kf[:,:,ii])
+                inv_var_kf = np.zeros((var_len,var_len))
+                for rr in range(var_len):
+                    for uu in range(var_len):
+                        inv_var_kf[rr][uu] = float('inf')
             try:
 
                 var_fb = np.linalg.inv(inv_var_kf+np.asarray(np.asmatrix(Gkal).T*np.asmatrix(invQ)*np.asmatrix(Gkal)))
             except:
-                print "var fb det",np.linalg.det(inv_var_kf+np.asarray(np.asmatrix(Gkal).T*np.asmatrix(invQ)*np.asmatrix(Gkal)))
-                var_fb = np.zeros((len(inv_var_kf),len(inv_var_kf)))
-                for rr in range(len(inv_var_kf)):
-                    for uu in range(len(inv_var_kf)):
+                print "var fb det", np.linalg.det(inv_var_kf+np.asarray(np.asmatrix(Gkal).T*np.asmatrix(invQ)*np.asmatrix(Gkal)))
+                var_len = len(inv_var_kf)
+                var_fb = np.zeros((var_len, var_len))
+                for rr in range(var_len):
+                    for uu in range(var_len):
                         var_fb[rr][uu] = float('inf')
 
-            mean_fb = np.dot(var_fb,np.dot(inv_var_kf,self.mean_kf[:,ii])+np.dot(np.asarray(np.asmatrix(Gkal).T*np.asmatrix(invQ)),new_beta[ii+1]))
+            mean_fb = np.dot(var_fb, np.dot(inv_var_kf, self.mean_kf[:, ii])+np.dot(np.asarray(np.asmatrix(Gkal).T*np.asmatrix(invQ)), new_beta[ii+1]))
             chol_star, check = self.Chol(var_fb)
-            if check ==0:
-                new_beta[ii] = mean_fb + np.dot(chol_star,np.random.normal(size=len(chol_star[0])))
+            if check == 0:
+                new_beta[ii] = mean_fb + np.dot(chol_star, np.random.normal(size=len(chol_star[0])))
             else:
                 self.check_star = 0
 
-        if self.check_star ==1 and sum(sum(np.isnan(new_beta)))== 0 and sum(sum(np.isinf(new_beta)))==0:
+        if self.check_star == 1 and sum(sum(np.isnan(new_beta))) == 0:
             #print "update beta"
-            self.beta[:,z_star==1] = copy.deepcopy(new_beta)
+            self.beta[:, z_star == 1] = copy.deepcopy(new_beta)
         else:
             print "not update beta"
-        
-    def Chol(self,matrix):
+
+    def Chol(self, matrix):
         try:
             chol_star = np.linalg.cholesky(matrix)
             check = 0
         except:
             chol_star = np.array([1])
-            check =1
-        return chol_star,check
+            check = 1
+        return chol_star, check
 
-    def UpdateMuStar(self,it):
+    def UpdateMuStar(self, it):
         new_mu_star = 1.0*self.mu_star*np.exp(self.mu_gamma_sd*np.random.normal())
         log_accept = 1.0*(self.p-1)*self.lambda_star*(np.log(self.mu_star)-np.log(new_mu_star))
         log_accept = log_accept-self.lambda_star*(1.0/new_mu_star-1.0/self.mu_star)*sum(self.mu[1:])
-        log_accept = log_accept +np.log(new_mu_star)-np.log(self.mu_star)-3.0*np.log(new_mu_star+self.mu_mean)+3.0*np.log(self.mu_star+self.mu_mean)
+        log_accept = log_accept + np.log(new_mu_star)-np.log(self.mu_star)-3.0*np.log(new_mu_star+self.mu_mean)+3.0*np.log(self.mu_star+self.mu_mean)
 
         accept = 1
         if np.isnan(log_accept) or np.isinf(log_accept):
@@ -717,7 +715,7 @@ class NGAR():
     def UpdateOutput(self,it,burnin,every):
         if it > burnin and (it-burnin)%every ==0:
             self.hold_beta[:,:,(it-burnin)/every-1] = copy.deepcopy(self.beta)
-            #print self.beta
+            print self.beta
             self.hold_psi[:,:,(it-burnin)/every-1] = copy.deepcopy(self.psi)
             self.hold_sigma_sq[:,(it-burnin)/every-1] = copy.deepcopy(self.sigma_sq)
             self.hold_lambda[:,(it-burnin)/every-1] = copy.deepcopy(self.lambda_)
@@ -731,7 +729,7 @@ class NGAR():
             self.hold_mu_star[(it-burnin)/every-1] = copy.deepcopy(self.mu_star)
 
     def Plot(self):
-    
+
         with file('output/beta.txt', 'w') as outfile:
             for data_slice in self.hold_beta:
                 outfile.write('# New iteration beta\n')
@@ -770,5 +768,6 @@ if __name__ == "__main__":
 
     x_path = "data/GDP_data.mat"
     y_path = "data/GDP_target.mat"
+    print "start:\n"
 
     gdp_case = NGAR(x_path,y_path,0.1,0.1,2000,5000,5)
