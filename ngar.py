@@ -353,13 +353,22 @@ class NGAR():
                 self.kappa_sigma_sq[ii] = new_kappa_sigma_sq
             self.log_kappa_sigma_sqq[ii] = self.log_kappa_sigma_sqq[ii]+1.0/it**0.55*(accept-0.3)
 
-            if np.isnan(self.kappa_sigma_sq[ii]) or np.isreal(self.kappa_sigma_sq[ii])==0:
+            if np.isnan(self.kappa_sigma_sq[ii]) or np.isreal(self.kappa_sigma_sq[ii]) == 0:
                 stop
 
-
-    def UpdateTheta(self,it):
+    def UpdateTheta(self, it):
         z_star = np.random.random(self.p) < 5.0/self.p
-        y_star = self.y_list - (self.x_list[:,z_star==0]*self.beta[:,z_star==0]).sum(axis=1)
+
+        temp_count = 0
+        for item in z_star:
+            if item ==1:
+                temp_count = temp_count + 1
+
+        if temp_count == 0:
+            print "not choose a beta\n"
+            time.sleep(200)
+
+        y_star = self.y_list - (self.x_list[:,z_star ==0 ]*self.beta[:,z_star ==0]).sum(axis=1)
         x_star = copy.deepcopy(self.x_list[:,z_star==1])
         psi_star = copy.deepcopy(self.psi[:,z_star==1])
         kappa_star = copy.deepcopy(self.kappa[:,z_star==1])
@@ -662,6 +671,12 @@ class NGAR():
         else:
             print "not update beta"
 
+        for ii in range(len(self.beta)):
+            for jj in range(len(self.beta[ii])):
+                if self.beta[ii][jj] >1000:
+                    print ii,jj,self.beta[ii][jj]
+                    time.sleep(1000)
+
     def Chol(self, matrix):
         try:
             chol_star = np.linalg.cholesky(matrix)
@@ -715,7 +730,7 @@ class NGAR():
     def UpdateOutput(self,it,burnin,every):
         if it > burnin and (it-burnin)%every ==0:
             self.hold_beta[:,:,(it-burnin)/every-1] = copy.deepcopy(self.beta)
-            print self.beta
+            #print self.beta
             self.hold_psi[:,:,(it-burnin)/every-1] = copy.deepcopy(self.psi)
             self.hold_sigma_sq[:,(it-burnin)/every-1] = copy.deepcopy(self.sigma_sq)
             self.hold_lambda[:,(it-burnin)/every-1] = copy.deepcopy(self.lambda_)
