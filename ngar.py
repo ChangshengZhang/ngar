@@ -359,15 +359,6 @@ class NGAR():
     def UpdateTheta(self, it):
         z_star = np.random.random(self.p) < 5.0/self.p
 
-        temp_count = 0
-        for item in z_star:
-            if item ==1:
-                temp_count = temp_count + 1
-
-        if temp_count == 0:
-            print "not choose a beta\n"
-            time.sleep(200)
-
         y_star = self.y_list - (self.x_list[:,z_star ==0 ]*self.beta[:,z_star ==0]).sum(axis=1)
         x_star = copy.deepcopy(self.x_list[:,z_star==1])
         psi_star = copy.deepcopy(self.psi[:,z_star==1])
@@ -665,17 +656,18 @@ class NGAR():
             else:
                 self.check_star = 0
 
-        if self.check_star == 1 and sum(sum(np.isnan(new_beta))) == 0:
+        if self.check_star == 1 and sum(sum(np.isnan(new_beta))) == 0 and self.CheckBeta(new_beta):
             #print "update beta"
             self.beta[:, z_star == 1] = copy.deepcopy(new_beta)
         else:
             print "not update beta"
 
-        for ii in range(len(self.beta)):
-            for jj in range(len(self.beta[ii])):
-                if self.beta[ii][jj] >1000:
-                    print ii,jj,self.beta[ii][jj]
-                    time.sleep(1000)
+    def CheckBeta(self, beta):
+        for ii in range(len(beta)):
+            for jj in range(len(beta[ii])):
+                if beta[ii][jj] > 100:
+                    return 0
+        return 1
 
     def Chol(self, matrix):
         try:
@@ -694,16 +686,16 @@ class NGAR():
 
         accept = 1
         if np.isnan(log_accept) or np.isinf(log_accept):
-            accept =0
-        elif log_accept <0:
+            accept = 0
+        elif log_accept < 0:
             accept = np.exp(log_accept)
         self.mu_gamma_accept = self.mu_gamma_accept + accept
-        self.mu_gamma_count = self.mu_gamma_count +1
+        self.mu_gamma_count = self.mu_gamma_count + 1
 
         if np.random.random() < accept:
             self.mu_star = new_mu_star
         new_mu_gammma_sd = self.mu_gamma_sd +1.0/it**0.5*(accept-0.3)
-        if new_mu_gammma_sd > 10**(-3) and  new_mu_gammma_sd <10**3:
+        if new_mu_gammma_sd > 10**(-3) and new_mu_gammma_sd < 10**3:
             self.mu_gamma_sd = new_mu_gammma_sd
 
     def UpdateLambdaStar(self,it):
