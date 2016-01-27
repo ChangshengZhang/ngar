@@ -737,12 +737,12 @@ class NGAR():
 
     def Plot(self):
 
-        with file('output/beta.txt', 'w') as outfile:
-            for data_slice in self.hold_beta:
-                outfile.write('# New iteration beta\n')
-                np.savetxt(outfile, data_slice)
+        # with file('output/beta.txt', 'w') as outfile:
+        #     for data_slice in self.hold_beta:
+        #         outfile.write('# New iteration beta\n')
+        #         np.savetxt(outfile, data_slice)
 
-        final_beta_median = np.median(self.hold_beta,axis=2)
+        final_beta_median = np.median(self.hold_beta, axis=2)
 
         for ii in range(self.p):
             plt.figure(ii+1)
@@ -751,10 +751,10 @@ class NGAR():
             plt.xlabel("T")
             plt.ylabel("beta")
             png_name = "output/beta"+str(ii+1)+".png"
-            plt.savefig(png_name,dpi = 100)
+            plt.savefig(png_name, dpi=100)
 
 
-    def LoadData(self,x_path,y_path):
+    def LoadData(self, x_path, y_path):
         x_origin_list = sio.loadmat(x_path)['data']
         y_origin_list = sio.loadmat(y_path)['target']
         y_list = np.zeros(len(y_origin_list))
